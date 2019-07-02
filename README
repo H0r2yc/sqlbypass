@@ -1,6 +1,7 @@
-Sql pass tamper - To test sql
+Sql pass tamper - To test sqlpass
 Version 1.0 Beta
 The program written by H0r2yC.
+
 
 Welcome to my site:http://www.h0r2yc.com or order my wechat:网安成长笔记
 
@@ -9,9 +10,9 @@ using:
 ./fixfuzz.py -u <url> -d <dbname> [-r <threads> -p -h]
  -u |--url <URL>
  -d |--dbms database kind<sqllite,mysql,oracle,mssql>
- -d |--dbms database kind<sqllite,mysql,oracle,mssql>
+ -k |--key the correct response page have the key
  -r |--threads <Number of threads> Defaults to 16(max)
  -p |--proxy proxy(开发中)
  -h |--help Shows this help
 
-Eg. ./fixfuzz.py -u http://127.0.0.1/news/list.php?id=11 -d mysql -r 256 -p http://127.0.0.1:1080
+Eg. ./fixfuzz.py -u http://127.0.0.1/news/list.php?id=11 -d mysql -r 256 -k MYSQL
